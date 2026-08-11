@@ -6,7 +6,7 @@ from .tree import BayesianDecisionTree
 class SmallGBMClassifier(BaseEstimator, ClassifierMixin):
     def __init__(self, n_estimators=50, max_depth=3, min_samples_leaf=3,
              learning_rate=0.1, sigma_prior=0.5, adaptive_prior=False,
-             dynamic_depth=False, weighted_residuals=False, soft_bootstrap=False):
+             dynamic_depth=False, weighted_residuals=False, soft_bootstrap=False, random_state=None):
         self.n_estimators = n_estimators
         self.max_depth = max_depth
         self.min_samples_leaf = min_samples_leaf
@@ -16,6 +16,7 @@ class SmallGBMClassifier(BaseEstimator, ClassifierMixin):
         self.dynamic_depth = dynamic_depth
         self.weighted_residuals = weighted_residuals
         self.soft_bootstrap = soft_bootstrap
+        self.random_state = random_state
 
     def _log_odds(self, y):
         pos = np.sum(y == 1)
@@ -29,6 +30,9 @@ class SmallGBMClassifier(BaseEstimator, ClassifierMixin):
         X = np.array(X)
         y = np.array(y)
         n_samples = len(y)
+        
+        if self.random_state is not None:
+            np.random.seed(self.random_state)
 
         init = self._log_odds(y)
         self.base_score_ = init
@@ -99,7 +103,7 @@ class SmallGBMClassifier(BaseEstimator, ClassifierMixin):
 class SmallGBMRegressor(BaseEstimator, RegressorMixin):
     def __init__(self, n_estimators=50, max_depth=3, min_samples_leaf=3,
                  learning_rate=0.1, sigma_prior=0.5, adaptive_prior=False,
-                 dynamic_depth=False, weighted_residuals=False, soft_bootstrap=False):
+                 dynamic_depth=False, weighted_residuals=False, soft_bootstrap=False, random_state=None):
         self.n_estimators = n_estimators
         self.max_depth = max_depth
         self.min_samples_leaf = min_samples_leaf
@@ -109,11 +113,15 @@ class SmallGBMRegressor(BaseEstimator, RegressorMixin):
         self.dynamic_depth = dynamic_depth
         self.weighted_residuals = weighted_residuals
         self.soft_bootstrap = soft_bootstrap
-
+        self.random_state = random_state
+        
     def fit(self, X, y):
         X = np.array(X)
         y = np.array(y).astype(float)
         n_samples = len(y)
+        
+        if self.random_state is not None:
+            np.random.seed(self.random_state)
 
         # Initial prediction: mean of y
         init = np.mean(y)
