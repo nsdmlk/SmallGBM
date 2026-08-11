@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SmallGBM — Gradient Boosting for Small Data</title>
+    <meta name="description" content="SmallGBM — gradient boosting optimized for small datasets (n < 1000). Bayesian leaf weights, noise stability, scikit-learn compatible." />
+    <meta name="author" content="Emelyanov Ilya" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23FAFAF8' stroke='%238B5CF6' stroke-width='3'/%3E%3Ctext x='50' y='64' font-family='Georgia,serif' font-size='38' fill='%238B5CF6' text-anchor='middle' font-style='italic'%3ES%3C/text%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;450;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <style>
+        :root {
+            --bg: #FAFAF8;
+            --card: #FFFFFF;
+            --border: rgba(0, 0, 0, 0.06);
+            --text: #171717;
+            --text-secondary: #525252;
+            --text-tertiary: #A3A3A3;
+            --accent: #8B5CF6;
+            --accent-soft: rgba(139, 92, 246, 0.06);
+            --accent-hover: #7C3AED;
+            --green: #059669;
+            --green-soft: rgba(5, 150, 105, 0.06);
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.02);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.04);
+            --radius: 12px;
+            --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            --max-width: 880px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .nav-bar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(250, 250, 248, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+        }
+        .nav-inner {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 52px;
+        }
+        .nav-brand {
+            font-family: 'Instrument Serif', serif;
+            font-size: 1.2rem;
+            letter-spacing: -0.01em;
+            color: var(--text);
+            text-decoration: none;
+        }
+        .nav-links { display: flex; gap: 2px; }
+        .nav-links a {
+            font-size: 0.76rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 6px 13px;
+            border-radius: 100px;
+            transition: var(--transition);
+            font-weight: 450;
+        }
+        .nav-links a:hover { background: var(--accent-soft); color: var(--accent); }
+
+        .container {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 64px 24px 80px;
+            display: flex;
+            flex-direction: column;
+            gap: 72px;
+        }
+
+        /* Hero */
+        .hero {
+            text-align: center;
+            padding-top: 16px;
+        }
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            padding: 5px 15px;
+            border-radius: 100px;
+            margin-bottom: 22px;
+            background: var(--accent-soft);
+        }
+        .hero h1 {
+            font-family: 'Instrument Serif', serif;
+            font-size: 3rem;
+            font-weight: 400;
+            letter-spacing: -0.02em;
+            line-height: 1.08;
+            margin-bottom: 14px;
+        }
+        .hero h1 span { color: var(--accent); }
+        .hero .subtitle {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            max-width: 540px;
+            margin: 0 auto 28px;
+            line-height: 1.7;
+        }
+        .hero-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+        .btn {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.82rem;
+            font-weight: 500;
+            padding: 9px 22px;
+            border-radius: 100px;
+            text-decoration: none;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-outline { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+        .btn-outline:hover { background: #F5F5F3; }
+
+        /* Pip install */
+        .pip-box {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: #1E1E2E;
+            color: #CDD6F4;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.88rem;
+            padding: 10px 16px;
+            border-radius: 100px;
+            margin-bottom: 20px;
+        }
+        .pip-box button {
+            background: none;
+            border: none;
+            color: #A6ADC8;
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 2px 6px;
+            transition: var(--transition);
+        }
+        .pip-box button:hover { color: #fff; }
+        .pip-box .copied { color: var(--green); font-size: 0.7rem; display: none; }
+
+        /* Section headings */
+        .section-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+        .section-head i { font-size: 1.2rem; color: var(--accent); }
+        .section-head h2 {
+            font-family: 'Instrument Serif', serif;
+            font-size: 1.7rem;
+            font-weight: 400;
+            letter-spacing: -0.01em;
+        }
+
+        /* Why cards */
+        .why-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+        .why-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 26px 24px;
+            box-shadow: var(--shadow-sm);
+            text-align: center;
+        }
+        .why-card .icon-circle {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            margin: 0 auto 14px;
+            background: var(--accent-soft);
+            color: var(--accent);
+        }
+        .why-card h3 {
+            font-family: 'Instrument Serif', serif;
+            font-size: 1.15rem;
+            font-weight: 400;
+            margin-bottom: 8px;
+        }
+        .why-card p {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* Comparison table */
+        .table-wrap {
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--card);
+            box-shadow: var(--shadow-sm);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+        }
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        th {
+            font-weight: 600;
+            color: var(--text);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            background: #FAFAF8;
+        }
+        td { color: var(--text-secondary); }
+        tr:last-child td { border-bottom: none; }
+        .check { color: var(--green); }
+        .cross { color: #DC2626; }
+
+        /* Code blocks */
+        .code-block {
+            background: #1E1E2E;
+            border-radius: var(--radius);
+            padding: 20px 24px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            color: #CDD6F4;
+            overflow-x: auto;
+            line-height: 1.7;
+            margin-bottom: 14px;
+        }
+        .code-block .kw { color: #CBA6F7; }
+        .code-block .fn { color: #89B4FA; }
+        .code-block .str { color: #A6E3A1; }
+        .code-block .cmt { color: #6C7086; }
+        .code-block .num { color: #FAB387; }
+
+        /* API table */
+        .api-table td:first-child {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+            white-space: nowrap;
+        }
+        .api-table td:nth-child(2) {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--text-tertiary);
+        }
+
+        /* Research */
+        .graph-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 20px;
+        }
+        .graph-card h3 {
+            font-family: 'Instrument Serif', serif;
+            font-size: 1.2rem;
+            font-weight: 400;
+            margin-bottom: 6px;
+        }
+        .graph-card .graph-desc {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            line-height: 1.6;
+        }
+        .graph-card img {
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        .graph-card .graph-note {
+            font-size: 0.7rem;
+            color: var(--text-tertiary);
+            margin-top: 8px;
+            font-style: italic;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 28px 24px;
+            font-size: 0.72rem;
+            color: var(--text-tertiary);
+            border-top: 1px solid var(--border);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container { padding: 40px 18px 60px; gap: 52px; }
+            .hero h1 { font-size: 2.2rem; }
+            .why-grid { grid-template-columns: 1fr; }
+            .nav-links { display: none; }
+        }
+        @media (max-width: 480px) {
+            .container { padding: 28px 14px 44px; gap: 40px; }
+            .hero h1 { font-size: 1.7rem; }
+            .section-head h2 { font-size: 1.35rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="nav-bar">
+        <div class="nav-inner">
+            <a href="#" class="nav-brand">SmallGBM</a>
+            <div class="nav-links">
+                <a href="#why">Why</a>
+                <a href="#start">Start</a>
+                <a href="#api">API</a>
+                <a href="#research">Research</a>
+                <a href="https://github.com/nsdmlk/SmallGBM" target="_blank">GitHub</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+
+        <!-- HERO -->
+        <section class="hero">
+            <div class="hero-badge">
+                <i class="fas fa-cube"></i> PyPI · v1.0.1
+            </div>
+            <h1>Gradient Boosting<br>for <span>Small Data</span></h1>
+            <p class="subtitle">
+                XGBoost and LightGBM fail when you have 50–500 samples. SmallGBM is built from the ground up
+                for data-scarce regimes — Bayesian leaf weights, noise stability, and scikit-learn API.
+            </p>
+            <div class="pip-box" id="pipBox">
+                pip install smallgbm
+                <button onclick="copyPip()" aria-label="Copy to clipboard">
+                    <i class="far fa-copy"></i>
+                </button>
+                <span class="copied" id="copiedMsg">Copied!</span>
+            </div>
+            <div class="hero-actions">
+                <a href="#start" class="btn btn-primary">
+                    <i class="fas fa-rocket"></i> Get Started
+                </a>
+                <a href="https://github.com/nsdmlk/SmallGBM" target="_blank" class="btn btn-outline">
+                    <i class="fab fa-github"></i> View on GitHub
+                </a>
+            </div>
+        </section>
+
+        <!-- WHY -->
+        <section id="why">
+            <div class="section-head">
+                <i class="fas fa-circle-question"></i>
+                <h2>Why SmallGBM?</h2>
+            </div>
+
+            <div class="why-grid" style="margin-bottom:32px;">
+                <div class="why-card">
+                    <div class="icon-circle"><i class="fas fa-shield-halved"></i></div>
+                    <h3>Bayesian Leaf Weights</h3>
+                    <p>
+                        Shrinks leaf predictions toward zero when data is scarce. Prevents overfitting
+                        without manual tuning — the prior does the work.
+                    </p>
+                </div>
+                <div class="why-card">
+                    <div class="icon-circle"><i class="fas fa-wave-square"></i></div>
+                    <h3>Noise Stability</h3>
+                    <p>
+                        Degrades gracefully under label noise. At 20% flipped labels, SmallGBM
+                        outperforms XGBoost and LightGBM by a wide margin.
+                    </p>
+                </div>
+                <div class="why-card">
+                    <div class="icon-circle"><i class="fas fa-puzzle-piece"></i></div>
+                    <h3>scikit-learn Compatible</h3>
+                    <p>
+                        Drop-in replacement: same <code>fit</code>, <code>predict</code>,
+                        <code>predict_proba</code> interface. Works with GridSearchCV, pipelines, everything.
+                    </p>
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Feature</th>
+                            <th>SmallGBM</th>
+                            <th>XGBoost</th>
+                            <th>LightGBM</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Bayesian leaf weights</td>
+                            <td><span class="check"><i class="fas fa-check"></i></span></td>
+                            <td><span class="cross"><i class="fas fa-times"></i></span></td>
+                            <td><span class="cross"><i class="fas fa-times"></i></span></td>
+                        </tr>
+                        <tr>
+                            <td>Adaptive regularization</td>
+                            <td><span class="check"><i class="fas fa-check"></i></span></td>
+                            <td><span class="cross"><i class="fas fa-times"></i></span></td>
+                            <td><span class="cross"><i class="fas fa-times"></i></span></td>
+                        </tr>
+                        <tr>
+                            <td>No bootstrap (uses all data)</td>
+                            <td><span class="check"><i class="fas fa-check"></i></span></td>
+                            <td><span class="cross"><i class="fas fa-times"></i></span></td>
+                            <td><span class="cross"><i class="fas fa-times"></i></span></td>
+                        </tr>
+                        <tr>
+                            <td>Stable under label noise</td>
+                            <td><span class="check"><i class="fas fa-check"></i></span></td>
+                            <td><span class="cross"><i class="fas fa-times"></i></span></td>
+                            <td><span class="cross"><i class="fas fa-times"></i></span></td>
+                        </tr>
+                        <tr>
+                            <td>scikit-learn compatible</td>
+                            <td><span class="check"><i class="fas fa-check"></i></span></td>
+                            <td><span class="check"><i class="fas fa-check"></i></span></td>
+                            <td><span class="check"><i class="fas fa-check"></i></span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- GETTING STARTED -->
+        <section id="start">
+            <div class="section-head">
+                <i class="fas fa-rocket"></i>
+                <h2>Getting Started</h2>
+            </div>
+
+            <h4 style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-tertiary);margin-bottom:10px;">Installation</h4>
+            <div class="code-block">
+                <span class="cmt"># pip</span><br>
+                pip install smallgbm
+            </div>
+
+            <h4 style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-tertiary);margin-bottom:10px;margin-top:24px;">Classification — 5 lines</h4>
+            <div class="code-block">
+                <span class="kw">from</span> smallgbm <span class="kw">import</span> <span class="fn">SmallGBMClassifier</span><br><br>
+                model = <span class="fn">SmallGBMClassifier</span>()<br>
+                model.<span class="fn">fit</span>(X_train, y_train)<br>
+                proba = model.<span class="fn">predict_proba</span>(X_test)<br>
+                preds = model.<span class="fn">predict</span>(X_test)
+            </div>
+
+            <h4 style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-tertiary);margin-bottom:10px;margin-top:24px;">Regression — 5 lines</h4>
+            <div class="code-block">
+                <span class="kw">from</span> smallgbm <span class="kw">import</span> <span class="fn">SmallGBMRegressor</span><br><br>
+                model = <span class="fn">SmallGBMRegressor</span>()<br>
+                model.<span class="fn">fit</span>(X_train, y_train)<br>
+                preds = model.<span class="fn">predict</span>(X_test)
+            </div>
+        </section>
+
+        <!-- API REFERENCE -->
+        <section id="api">
+            <div class="section-head">
+                <i class="fas fa-book"></i>
+                <h2>API Reference</h2>
+            </div>
+
+            <h4 style="font-size:0.8rem;color:var(--text);margin-bottom:10px;">SmallGBMClassifier</h4>
+            <div class="table-wrap api-table" style="margin-bottom:28px;">
+                <table>
+                    <thead>
+                        <tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>n_estimators</td><td>50</td><td>Number of boosting rounds</td></tr>
+                        <tr><td>max_depth</td><td>3</td><td>Maximum tree depth</td></tr>
+                        <tr><td>min_samples_leaf</td><td>3</td><td>Minimum samples per leaf</td></tr>
+                        <tr><td>learning_rate</td><td>0.1</td><td>Shrinkage factor for each tree</td></tr>
+                        <tr><td>sigma_prior</td><td>0.5</td><td>Bayesian prior strength</td></tr>
+                        <tr><td>adaptive_prior</td><td>False</td><td>Auto-set sigma_prior = 1/√n</td></tr>
+                        <tr><td>dynamic_depth</td><td>False</td><td>Deeper early trees, shallower later</td></tr>
+                        <tr><td>weighted_residuals</td><td>False</td><td>Weight residuals by confidence</td></tr>
+                        <tr><td>soft_bootstrap</td><td>False</td><td>Soft bootstrap sampling</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h4 style="font-size:0.8rem;color:var(--text);margin-bottom:10px;">SmallGBMRegressor</h4>
+            <div class="table-wrap api-table">
+                <table>
+                    <thead>
+                        <tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>n_estimators</td><td>50</td><td>Number of boosting rounds</td></tr>
+                        <tr><td>max_depth</td><td>3</td><td>Maximum tree depth</td></tr>
+                        <tr><td>min_samples_leaf</td><td>3</td><td>Minimum samples per leaf</td></tr>
+                        <tr><td>learning_rate</td><td>0.1</td><td>Shrinkage factor for each tree</td></tr>
+                        <tr><td>sigma_prior</td><td>0.5</td><td>Bayesian prior strength</td></tr>
+                        <tr><td>adaptive_prior</td><td>False</td><td>Auto-set sigma_prior = 1/√n</td></tr>
+                        <tr><td>dynamic_depth</td><td>False</td><td>Deeper early trees, shallower later</td></tr>
+                        <tr><td>weighted_residuals</td><td>False</td><td>Weight residuals by confidence</td></tr>
+                        <tr><td>soft_bootstrap</td><td>False</td><td>Soft bootstrap sampling</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- RESEARCH -->
+        <section id="research">
+            <div class="section-head">
+                <i class="fas fa-flask"></i>
+                <h2>Research</h2>
+            </div>
+            <p style="font-size:0.88rem;color:var(--text-secondary);margin-bottom:28px;line-height:1.7;">
+                SmallGBM is characterized across 7 experiments in
+                <a href="https://github.com/nsdmlk/SmallGBM/blob/main/Tests/benchmark.ipynb" target="_blank" style="color:var(--accent);">benchmark_final.ipynb</a>.
+                Key findings below.
+            </p>
+
+            <div class="graph-card">
+                <h3>Noise Stability: SmallGBM vs Baselines</h3>
+                <p class="graph-desc">
+                    At 20% label noise, SmallGBM is the <strong>best performer</strong>. Bayesian regularization
+                    keeps it stable when XGBoost and LightGBM collapse toward random guessing.
+                </p>
+                <img src="noise_comparison.png" alt="Noise stability comparison" />
+                <p class="graph-note">Figure: Test AUC vs label noise. n=60, 10 seeds. Error bars = ±1 std.</p>
+            </div>
+
+            <div class="graph-card">
+                <h3>Learning Curve</h3>
+                <p class="graph-desc">
+                    Clear, predictable improvement as data grows. <strong>Reliable performance starts at n≈40.</strong>
+                    No sudden jumps, no catastrophic failures — a safe choice when data is limited.
+                </p>
+                <img src="learning_curve.png" alt="SmallGBM learning curve" />
+                <p class="graph-note">Figure: Test AUC vs training set size. 10 seeds per point. Error bars = ±1 std.</p>
+            </div>
+
+            <p style="font-size:0.8rem;color:var(--text-tertiary);margin-top:8px;">
+                <i class="fas fa-file-pdf"></i> Full characterization notebook with 7 experiments:
+                <a href="https://github.com/nsdmlk/SmallGBM/blob/main/Tests/benchmark.ipynb" target="_blank" style="color:var(--accent);">benchmark_final.ipynb</a>
+            </p>
+        </section>
+
+    </main>
+
+    <footer class="footer">
+        <i class="fas fa-cube" style="color:var(--accent);margin-right:6px;"></i>
+        SmallGBM · MIT License · Built by <a href="https://nsdmlk.github.io" style="color:var(--accent);">Emelyanov Ilya</a>
+    </footer>
+
+    <script>
+        function copyPip() {
+            navigator.clipboard.writeText('pip install smallgbm');
+            const msg = document.getElementById('copiedMsg');
+            msg.style.display = 'inline';
+            setTimeout(() => { msg.style.display = 'none'; }, 2000);
+        }
+
+        // Smooth scroll
+        document.querySelectorAll('.nav-links a[href^="#"]').forEach(l => {
+            l.addEventListener('click', function(e) {
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    e.preventDefault();
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>
