@@ -1,2 +1,2 @@
 # smallgbm/__init__.py
-from .smallgbm import SmallGBMClassifier
+from .smallgbm import SmallGBMClassifier, SmallGBMRegressor
