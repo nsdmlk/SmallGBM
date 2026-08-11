@@ -1,4 +1,3 @@
-
 # SmallGBM
 
 <p align="center">
