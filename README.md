@@ -35,7 +35,7 @@ XGBoost and LightGBM are built for scale. They shine on thousands of rows. But w
 SmallGBM degrades gracefully when labels are noisy — unlike XGBoost and LightGBM which drop sharply.
 
 <p align="center">
-  <img src="docs/noise_comparison.png" width="600" alt="Noise stability comparison">
+  <img src="documents/noise_comparison.png" width="600" alt="Noise stability comparison">
 </p>
 
 *At 20% label noise, SmallGBM is the best performer. Bayesian regularization keeps it stable when others collapse.*
@@ -47,7 +47,7 @@ SmallGBM degrades gracefully when labels are noisy — unlike XGBoost and LightG
 Clear, predictable improvement as data grows. Reliable performance starts at **n ≈ 40**.
 
 <p align="center">
-  <img src="docs/learning_curve.png" width="600" alt="Learning curve">
+  <img src="documents/learning_curve.png" width="600" alt="Learning curve">
 </p>
 
 *No sudden jumps, no catastrophic failures. A safe choice when data is limited.*
