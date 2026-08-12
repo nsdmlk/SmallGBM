@@ -21,7 +21,7 @@ class BayesianDecisionTree:
         sigma_noise = self._variance(residuals)
         if sigma_noise == 0:
             return sum_r / n if n > 0 else 0.0
-        shrinkage = sigma_noise / (self.sigma_prior ** 2)
+        shrinkage = sigma_noise**2 / (self.sigma_prior ** 2)
         return sum_r / (n + shrinkage)
     
     def _best_split(self, X, residuals):
