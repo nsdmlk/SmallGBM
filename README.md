@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.1.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-1.2.0-blue" alt="version">
   <img src="https://img.shields.io/badge/python-3.8+-green" alt="python">
   <img src="https://img.shields.io/badge/license-MIT-brightgreen" alt="license">
   <img src="https://img.shields.io/badge/pip%20install-smallgbm-orange" alt="pip">
@@ -18,11 +18,12 @@
 
 XGBoost and LightGBM are built for scale. They shine on thousands of rows. But when you only have **50, 100, or 500 samples**, their default hyperparameters fail — overfitting, instability, unpredictable results.
 
-**SmallGBM** is designed from the ground up for datasets with fewer than 1000 samples, using Bayesian leaf weight regularization to prevent overfitting on small leaves.
+**SmallGBM** is designed from the ground up for datasets with fewer than 1000 samples, using Bayesian leaf weight regularization with empirical Bayes estimation.
 
 | Feature                      | SmallGBM | XGBoost | LightGBM |
 | ---------------------------- | -------- | ------- | -------- |
 | Bayesian leaf weights        | ✅       | ❌      | ❌       |
+| Empirical Bayes prior        | ✅       | ❌      | ❌       |
 | Uncertainty estimates        | ✅       | ❌      | ❌       |
 | No bootstrap (uses all data) | ✅       | ❌      | ❌       |
 | Stable under label noise     | ✅       | ❌      | ❌       |
@@ -30,13 +31,19 @@ XGBoost and LightGBM are built for scale. They shine on thousands of rows. But w
 
 ---
 
-## Research
+## Benchmark Results
 
-SmallGBM has been evaluated on 16 datasets (synthetic and real-world) with sample sizes from 20 to 1000. Key findings:
+SmallGBM has been evaluated on 16 datasets (synthetic and real-world) with sample sizes from 20 to 1000.
 
-- **Noise stability**: At 20% label noise, SmallGBM outperforms XGBoost and LightGBM
-- **Prior insensitivity**: Performance is nearly invariant to `sigma_prior` across three orders of magnitude
-- **Predictable learning curve**: Reliable performance begins at n ≈ 40
+**Average ROC-AUC across all datasets:**
+
+| Model       | AUC    |
+| ----------- | ------ |
+| XGBoost     | 0.8723 |
+| **SmallGBM** | **0.8651** |
+| LightGBM    | 0.8619 |
+
+*SmallGBM outperforms LightGBM by +0.3% on average across 16 datasets.*
 
 <p align="center">
   <img src="docs/noise_comparison.png" width="600" alt="Noise stability comparison">
