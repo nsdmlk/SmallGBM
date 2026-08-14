@@ -1,7 +1,8 @@
 # SmallGBM
 
 <p align="center">
-  <b>Gradient boosting that beats LightGBM and matches XGBoost on small data.</b>
+  <b>Gradient boosting for small tabular data.</b><br>
+  <sub>Matches XGBoost · Outperforms LightGBM · Lower variance</sub>
 </p>
 
 <p align="center">
@@ -16,35 +17,36 @@
 
 ## What is SmallGBM?
 
-SmallGBM is a gradient boosting library designed for **small datasets** (n < 1000). It combines robust leaf weight estimation with adaptive column sampling to deliver accuracy on par with XGBoost — while remaining simple, fast, and stable.
+SmallGBM is a gradient boosting library designed for **small datasets** (n < 1000). It combines robust leaf weight estimation with controlled column subsampling to deliver accuracy on par with XGBoost — with lower variance and no hyperparameter tuning.
 
 ---
 
 ## Benchmark
 
-**30 datasets, 5-fold cross-validation, mean ROC-AUC:**
+**30 datasets · 5-fold cross-validation · mean ROC-AUC**
 
-| Model        | AUC    | Std    |
-| ------------ | ------ | ------ |
+| Model        | AUC    | Std     |
+| ------------ | ------ | ------- |
 | XGBoost      | 0.9089 | ±0.0755 |
 | **SmallGBM** | **0.9085** | **±0.0697** |
 | RandomForest | 0.9055 | ±0.0768 |
 | LightGBM     | 0.8995 | ±0.0709 |
 
-*SmallGBM is statistically indistinguishable from XGBoost, beats RandomForest by +0.3%, and LightGBM by +0.9%. SmallGBM also has the lowest variance across all models.*
+> SmallGBM is statistically indistinguishable from XGBoost, beats RandomForest by +0.3%, LightGBM by +0.9%, and has the **lowest variance** among all models.
 
 ---
 
 ## Why Robust Leaf Weights?
 
-Standard gradient boosting uses the **mean** of residuals in each leaf. On small data, a single outlier can ruin the mean.
+Standard gradient boosting uses the **mean** of residuals per leaf. On small data, one outlier can destroy the estimate.
 
 SmallGBM uses:
-- **Median** for leaves with n ≤ 30
-- **Weighted mean** with inverse-distance weights for larger leaves
-- **Signal-adaptive shrinkage** toward the parent node value
 
-This makes predictions robust to outliers and noise — the main enemies of small-sample learning.
+- **Median** for leaves with n ≤ 30
+- **Inverse-distance weighted mean** for larger leaves
+- **Signal-adaptive shrinkage** toward the parent node
+
+This makes predictions robust to outliers and label noise — the main enemies of small-sample learning.
 
 ---
 
@@ -64,42 +66,30 @@ model.fit(X_train, y_train)
 proba = model.predict_proba(X_test)
 ```
 
-## API
+---
 
-### SmallGBMClassifier
+## Parameters
 
-| Parameter            | Default | Description               |
-| -------------------- | ------- | ------------------------- |
-| `n_estimators`     | 50      | Number of boosting rounds |
-| `max_depth`        | 3       | Maximum tree depth        |
-| `min_samples_leaf` | 3       | Minimum samples per leaf  |
-| `learning_rate`    | 0.1     | Shrinkage factor          |
-| `sigma_prior`      | 0.5     | Regularization strength   |
-| `colsample_bytree` | 0.5     | Fraction of features per tree |
-| `random_state`     | None    | Random seed for reproducibility |
-| `auto_scale`       | False   | Apply RobustScaler internally |
-
-### SmallGBMRegressor
-
-Same parameters, for regression tasks.
-
-```python
-from smallgbm import SmallGBMRegressor
-
-model = SmallGBMRegressor()
-model.fit(X_train, y_train)
-preds = model.predict(X_test)
-```
+| Parameter           | Default | Description                  |
+| ------------------- | ------- | ---------------------------- |
+| `n_estimators`      | 50      | Boosting rounds              |
+| `max_depth`         | 3       | Max tree depth               |
+| `min_samples_leaf`  | 3       | Min samples per leaf         |
+| `learning_rate`     | 0.1     | Shrinkage                    |
+| `sigma_prior`       | 0.5     | Regularization strength      |
+| `colsample_bytree`  | 0.5     | Feature fraction per tree    |
+| `random_state`      | None    | Reproducibility              |
+| `auto_scale`        | False   | RobustScaler internally      |
 
 ---
 
-## Key Features
+## Features
 
 - **Robust leaf weights** — median + adaptive shrinkage
 - **Column subsampling** — fights overfitting in high-dimensional small data
-- **Uncertainty estimates** — `predict_with_uncertainty()` available
+- **Uncertainty estimates** — `predict_with_uncertainty()`
 - **scikit-learn compatible** — `fit`, `predict`, `predict_proba`
-- **Pure Python + NumPy** — no compilation, easy to install
+- **Pure Python + NumPy** — no compilation, easy install
 
 ---
 
@@ -119,7 +109,7 @@ preds = model.predict(X_test)
 
 ## License
 
-MIT © [Emelyanov Ilya](https://github.com/nsdmlk) 2026
+MIT © [Emelyanov Ilya](https://github.com/nsdmlk), 2026
 
 ---
 
