@@ -2,7 +2,7 @@
 
 <p align="center">
   <b>Gradient boosting for small tabular data.</b><br>
-  <sub>Matches XGBoost · Outperforms LightGBM · Lower variance</sub>
+  <sub>Statistical parity with XGBoost · Outperforms LightGBM · Lowest variance</sub>
 </p>
 
 <p align="center">
@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/python-3.8+-green" alt="python">
   <img src="https://img.shields.io/badge/license-MIT-brightgreen" alt="license">
   <img src="https://img.shields.io/badge/pip%20install-smallgbm-orange" alt="pip">
-  <img src="https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21905013-blue" alt="DOI">
+  <img src="https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21934674-blue" alt="DOI">
 </p>
 
 ---
@@ -23,16 +23,16 @@ SmallGBM is a gradient boosting library designed for **small datasets** (n < 100
 
 ## Benchmark
 
-**30 datasets · 5-fold cross-validation · mean ROC-AUC**
+**27 datasets (15 synthetic + 12 real-world) · 5-fold cross-validation · mean ROC-AUC**
 
 | Model        | AUC    | Std     |
 | ------------ | ------ | ------- |
-| XGBoost      | 0.9089 | ±0.0755 |
-| **SmallGBM** | **0.9085** | **±0.0697** |
-| RandomForest | 0.9055 | ±0.0768 |
-| LightGBM     | 0.8995 | ±0.0709 |
+| **SmallGBM** | **0.9157** | **±0.0723** |
+| XGBoost      | 0.9156 | ±0.0792 |
+| RandomForest | 0.9140 | ±0.0788 |
+| LightGBM     | 0.9047 | ±0.0752 |
 
-> SmallGBM is statistically indistinguishable from XGBoost, beats RandomForest by +0.3%, LightGBM by +0.9%, and has the **lowest variance** among all models.
+> SmallGBM achieves **statistical parity with XGBoost** (p > 0.05), outperforms RandomForest by +0.17%, LightGBM by +1.1%, and has the **lowest variance** among all models.
 
 ---
 
@@ -100,7 +100,7 @@ proba = model.predict_proba(X_test)
   author = {Emelyanov, Ilya},
   title = {SmallGBM: Gradient Boosting with Robust Leaf Regularization for Small-Sample Tabular Data},
   year = {2026},
-  doi = {10.5281/zenodo.21905013},
+  doi = {10.5281/zenodo.21934674},
   url = {https://github.com/nsdmlk/SmallGBM}
 }
 ```
