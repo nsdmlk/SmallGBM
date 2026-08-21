@@ -25,12 +25,12 @@ SmallGBM is a gradient boosting library designed for **small datasets** (n < 100
 
 **27 datasets (15 synthetic + 12 real-world) · 5-fold cross-validation · mean ROC-AUC**
 
-| Model        | AUC    | Std     |
-| ------------ | ------ | ------- |
+| Model              | AUC              | Std                |
+| ------------------ | ---------------- | ------------------ |
 | **SmallGBM** | **0.9241** | **±0.0676** |
-| XGBoost      | 0.9156 | ±0.0792 |
-| RandomForest | 0.9140 | ±0.0788 |
-| LightGBM     | 0.9047 | ±0.0752 |
+| XGBoost            | 0.9156           | ±0.0792           |
+| RandomForest       | 0.9140           | ±0.0788           |
+| LightGBM           | 0.9047           | ±0.0752           |
 
 > SmallGBM **outperforms XGBoost by +0.85%**, RandomForest by +1.0%, LightGBM by +1.9%, and has the **lowest variance** among all models.
 
