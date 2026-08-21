@@ -25,11 +25,6 @@ class SmallGBMClassifier(BaseEstimator, ClassifierMixin):
         self.random_state = random_state
         self.auto_scale = auto_scale
         self.colsample_bytree = colsample_bytree
-        
-        # Кэши
-        self._X_cache = None
-        self._y_cache = None
-        self._trees_cache = None
 
     def _log_odds(self, y):
         pos = np.sum(y == 1)
@@ -37,7 +32,6 @@ class SmallGBMClassifier(BaseEstimator, ClassifierMixin):
         return np.log((pos + 1e-10) / (neg + 1e-10))
 
     def _sigmoid(self, x):
-        # Быстрая сигмоида с клиппингом
         x = np.clip(x, -30, 30)
         return 1.0 / (1.0 + np.exp(-x))
 
@@ -60,7 +54,6 @@ class SmallGBMClassifier(BaseEstimator, ClassifierMixin):
         trees = []
         current_pred = np.full(y_train.shape, init, dtype=np.float64)
         
-        # Предварительно кэшируем сигмоиду
         for i in range(self.n_estimators):
             proba = self._sigmoid(current_pred)
             residuals = y_train - proba
@@ -83,7 +76,6 @@ class SmallGBMClassifier(BaseEstimator, ClassifierMixin):
             )
             tree.fit(X_train, residuals)
             
-            # Векторизованное обновление
             update = tree.predict(X_train)
             current_pred += self.learning_rate * update
             trees.append(tree)
@@ -93,11 +85,6 @@ class SmallGBMClassifier(BaseEstimator, ClassifierMixin):
     def fit(self, X, y):
         X = np.asarray(X, dtype=np.float64)
         y = np.asarray(y)
-        
-        # Кэшируем входные данные
-        self._X_cache = X
-        self._y_cache = y
-        
         self.classes_ = np.unique(y)
         
         colsample = self.colsample_bytree
@@ -118,7 +105,6 @@ class SmallGBMClassifier(BaseEstimator, ClassifierMixin):
             init, trees = self._fit_single_boost(X, y, seed, colsample)
             self._models.append((init, trees))
         
-        self._trees_cache = self._models
         return self
 
     def _predict_proba_single(self, X, init, trees):

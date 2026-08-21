@@ -1,7 +1,7 @@
 import numpy as np
 
 class RobustDecisionTree:
-    """Decision tree with robust (median/IQM) leaf weight estimation."""
+    """Decision tree with robust (median) leaf weight estimation."""
     
     def __init__(self, max_depth=2, min_samples_leaf=5, sigma_prior=1.0, n_splits=10,
                  colsample_bytree=1.0):
@@ -45,46 +45,53 @@ class RobustDecisionTree:
         best_gain = -np.inf
         best_feature = None
         best_threshold = None
-        
+    
         n_features = X.shape[1]
         n = len(residuals)
-        
+    
         if self.colsample_bytree < 1.0 and n_features > 1:
             n_cols = max(1, int(n_features * self.colsample_bytree))
             feature_indices = np.random.choice(n_features, n_cols, replace=False)
         else:
             feature_indices = range(n_features)
-        
+    
         for feature in feature_indices:
             values = X[:, feature]
             sort_idx = np.argsort(values)
             sorted_values = values[sort_idx]
             sorted_residuals = residuals[sort_idx]
-            
+        
             cumsum = np.cumsum(sorted_residuals)
             total_sum = cumsum[-1]
-            
-            for pos in range(self.min_samples_leaf, n - self.min_samples_leaf + 1):
+        
+            # Только 5 случайных порогов вместо всех
+            possible_positions = np.random.choice(
+                range(self.min_samples_leaf, n - self.min_samples_leaf + 1),
+                size=min(5, n - 2*self.min_samples_leaf),
+                replace=False
+            )
+        
+            for pos in possible_positions:
                 left_n = pos
                 right_n = n - pos
-                
+            
                 left_sum = cumsum[pos - 1]
                 right_sum = total_sum - left_sum
-                
+            
                 lambda_reg = self.sigma_prior_sq
                 left_score = left_sum ** 2 / (left_n + lambda_reg)
                 right_score = right_sum ** 2 / (right_n + lambda_reg)
                 parent_score = total_sum ** 2 / (n + lambda_reg)
-                
+            
                 gain = left_score + right_score - parent_score
-                
+            
                 if gain > best_gain:
                     best_gain = gain
                     best_feature = feature
                     best_threshold = (sorted_values[pos - 1] + sorted_values[pos]) / 2
-        
-        return best_feature, best_threshold, best_gain
     
+        return best_feature, best_threshold, best_gain
+
     def _build_tree(self, X, residuals, depth=0, parent_mu=0.0):
         n = len(residuals)
         
