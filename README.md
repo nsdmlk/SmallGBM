@@ -123,4 +123,3 @@ MIT © [Emelyanov Ilya](https://github.com/nsdmlk), 2026
 <p align="center">
   <sub>Built for researchers and engineers working with limited data.</sub>
 </p>
----
