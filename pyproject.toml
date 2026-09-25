@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "smallgbm"
+version = "1.5.0"
+description = "Gradient boosting optimized for small datasets (C backend)"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [{name = "Emelyanov Ilya", email = "Nsdmlk@yandex.ru"}]
+dependencies = [
+    "numpy>=1.20.0",
+    "scikit-learn>=1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/nsdmlk/SmallGBM"
+Repository = "https://github.com/nsdmlk/SmallGBM"
+
+[tool.setuptools]
+packages = ["smallgbm"]
+
+[tool.setuptools.package-data]
+smallgbm = ["_c/*.c", "_c/*.h", "_c/*.dylib", "_c/*.so", "_c/*.dll"]
