@@ -58,14 +58,31 @@ Full enumeration of all possible split thresholds overfits on small data. SmallG
 
 ---
 
+## When NOT to use SmallGBM
+
+SmallGBM is designed for **small datasets (n < 1000)**. On larger data,
+use XGBoost or LightGBM — they are optimized for scale and will train
+orders of magnitude faster.
+
+| n    | SmallGBM AUC | XGBoost AUC | SmallGBM fit | XGBoost fit |
+| ---- | ------------ | ----------- | ------------ | ----------- |
+| 10k  | 0.875        | 0.912       | 2.4s         | 0.13s       |
+| 50k  | 0.863        | 0.903       | 26.4s        | 0.43s       |
+| 200k | 0.884        | 0.923       | 69.0s        | 0.71s       |
+
+On n > 1000, SmallGBM loses on both accuracy and speed. This is
+expected: robust leaf regularization is a small-sample technique.
+
+---
+
 ## Architecture
 
 smallgbm/
-├── smallgbm.py       # boosting logic (classifier + regressor)
-├── tree.py           # ctypes wrapper around libtree
-└── _c/
-    ├── tree.c        # histogram-based decision tree in C
-    └── tree.h
+	├── smallgbm.py       # boosting logic (classifier + regressor)
+	├── tree.py           # ctypes wrapper around libtree
+	└── _c/
+		├── tree.c        # histogram-based decision tree in C
+		└── tree.h
 
 
 The C library is compiled automatically on `pip install`. On macOS it produces `libtree.dylib`, on Linux `libtree.so`, on Windows `tree.dll`. No manual compilation needed.
