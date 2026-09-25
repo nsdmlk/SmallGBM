@@ -1,145 +1,141 @@
+import ctypes
+import os
+import sys
 import numpy as np
 
-class RobustDecisionTree:
-    """Decision tree with robust (median) leaf weight estimation."""
-    
-    def __init__(self, max_depth=2, min_samples_leaf=5, sigma_prior=1.0, n_splits=10,
-                 colsample_bytree=1.0):
-        self.max_depth = max_depth
-        self.min_samples_leaf = min_samples_leaf
-        self.sigma_prior = sigma_prior
-        self.sigma_prior_sq = sigma_prior ** 2
-        self.n_splits = n_splits
-        self.colsample_bytree = colsample_bytree
-        self.tree_ = None
-        self.feature_importances_ = None
-    
-    def _robust_weight(self, residuals, parent_mu=0.0):
-        n = len(residuals)
-        
-        if n == 0:
-            return parent_mu, 0.0
-        
-        threshold = 30
-        if n <= threshold:
-            center = np.median(residuals)
-            mad = np.median(np.abs(residuals - center))
-            sigma_noise = 1.4826 * mad if mad > 0 else self.sigma_prior
-        else:
-            med = np.median(residuals)
-            distances = np.abs(residuals - med)
-            weights = 1.0 / (distances + self.sigma_prior)
-            weights /= weights.sum()
-            center = np.sum(weights * residuals)
-            sigma_noise = np.sqrt(np.sum(weights * (residuals - center)**2))
-        
-        k = 1.5
-        ratio = sigma_noise ** 2 / (n * self.sigma_prior_sq)
-        shrinkage = 1.0 / (1.0 + ratio ** k)
-        mu = shrinkage * center + (1 - shrinkage) * parent_mu
-        std = sigma_noise / np.sqrt(n)
-        
-        return mu, std
-    
-    def _best_split(self, X, residuals):
-        best_gain = -np.inf
-        best_feature = None
-        best_threshold = None
-    
-        n_features = X.shape[1]
-        n = len(residuals)
-    
-        if self.colsample_bytree < 1.0 and n_features > 1:
-            n_cols = max(1, int(n_features * self.colsample_bytree))
-            feature_indices = np.random.choice(n_features, n_cols, replace=False)
-        else:
-            feature_indices = range(n_features)
-    
-        for feature in feature_indices:
-            values = X[:, feature]
-            sort_idx = np.argsort(values)
-            sorted_values = values[sort_idx]
-            sorted_residuals = residuals[sort_idx]
-        
-            cumsum = np.cumsum(sorted_residuals)
-            total_sum = cumsum[-1]
-        
-            # Только 5 случайных порогов вместо всех
-            possible_positions = np.random.choice(
-                range(self.min_samples_leaf, n - self.min_samples_leaf + 1),
-                size=min(5, n - 2*self.min_samples_leaf),
-                replace=False
-            )
-        
-            for pos in possible_positions:
-                left_n = pos
-                right_n = n - pos
-            
-                left_sum = cumsum[pos - 1]
-                right_sum = total_sum - left_sum
-            
-                lambda_reg = self.sigma_prior_sq
-                left_score = left_sum ** 2 / (left_n + lambda_reg)
-                right_score = right_sum ** 2 / (right_n + lambda_reg)
-                parent_score = total_sum ** 2 / (n + lambda_reg)
-            
-                gain = left_score + right_score - parent_score
-            
-                if gain > best_gain:
-                    best_gain = gain
-                    best_feature = feature
-                    best_threshold = (sorted_values[pos - 1] + sorted_values[pos]) / 2
-    
-        return best_feature, best_threshold, best_gain
+# ---------------- locate C library ----------------
 
-    def _build_tree(self, X, residuals, depth=0, parent_mu=0.0):
-        n = len(residuals)
-        
-        if (depth >= self.max_depth or 
-            n < self.min_samples_leaf * 2 or 
-            len(np.unique(residuals)) == 1):
-            mu, std = self._robust_weight(residuals, parent_mu)
-            return {'type': 'leaf', 'weight': mu, 'uncertainty': std, 'n_samples': n}
-        
-        feature, threshold, gain = self._best_split(X, residuals)
-        
-        if feature is None or gain <= 0:
-            mu, std = self._robust_weight(residuals, parent_mu)
-            return {'type': 'leaf', 'weight': mu, 'uncertainty': std, 'n_samples': n}
-        
-        node_mu, _ = self._robust_weight(residuals, parent_mu)
-        
-        left_mask = X[:, feature] <= threshold
-        right_mask = ~left_mask
-        
-        return {
-            'type': 'node',
-            'feature': feature,
-            'threshold': threshold,
-            'weight': node_mu,
-            'n_samples': n,
-            'left': self._build_tree(X[left_mask], residuals[left_mask], depth + 1, node_mu),
-            'right': self._build_tree(X[right_mask], residuals[right_mask], depth + 1, node_mu)
-        }
-    
-    def predict_with_uncertainty(self, X):
-        preds, uncertainties = [], []
-        for x in np.array(X):
-            node = self.tree_
-            while node['type'] != 'leaf':
-                node = node['left'] if x[node['feature']] <= node['threshold'] else node['right']
-            preds.append(node['weight'])
-            uncertainties.append(node['uncertainty'])
-        return np.array(preds), np.array(uncertainties)
-    
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_C_DIR = os.path.join(_HERE, "_c")
+
+if sys.platform == "darwin":
+    _LIBNAME = "libtree.dylib"
+elif sys.platform == "win32":
+    _LIBNAME = "tree.dll"
+else:
+    _LIBNAME = "libtree.so"
+
+_LIB_PATH = os.path.join(_C_DIR, _LIBNAME)
+
+if not os.path.exists(_LIB_PATH):
+    raise ImportError(
+        f"SmallGBM C library not found at {_LIB_PATH}.\n"
+        f"Build it manually:\n"
+        f"  cc -O3 -fPIC -shared smallgbm/_c/tree.c -o {_LIB_PATH} -lm\n"
+        f"or reinstall: pip install --force-reinstall smallgbm"
+    )
+
+_lib = ctypes.CDLL(_LIB_PATH)
+
+
+# ---------------- ctypes signatures ----------------
+
+class _Predictions(ctypes.Structure):
+    _fields_ = [
+        ("preds",         ctypes.POINTER(ctypes.c_double)),
+        ("uncertainties", ctypes.POINTER(ctypes.c_double)),
+        ("n",             ctypes.c_int),
+    ]
+
+
+_lib.tree_create.restype  = ctypes.c_void_p
+_lib.tree_create.argtypes = [
+    ctypes.c_int, ctypes.c_int, ctypes.c_double, ctypes.c_int, ctypes.c_double,
+]
+
+_lib.tree_free.restype  = None
+_lib.tree_free.argtypes = [ctypes.c_void_p]
+
+_lib.tree_fit.restype  = None
+_lib.tree_fit.argtypes = [
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_double),
+    ctypes.POINTER(ctypes.c_double),
+    ctypes.c_int, ctypes.c_int,
+]
+
+_lib.tree_predict.restype  = ctypes.POINTER(_Predictions)
+_lib.tree_predict.argtypes = [
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_double),
+    ctypes.c_int, ctypes.c_int,
+]
+
+_lib.predictions_free.restype  = None
+_lib.predictions_free.argtypes = [ctypes.POINTER(_Predictions)]
+
+
+def _dptr(arr):
+    return arr.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
+
+
+# ---------------- wrapper ----------------
+
+class RobustDecisionTree:
+    def __init__(self, max_depth=2, min_samples_leaf=5, sigma_prior=1.0,
+                 n_splits=10, colsample_bytree=1.0):
+        self.max_depth        = max_depth
+        self.min_samples_leaf = min_samples_leaf
+        self.sigma_prior      = sigma_prior
+        self.n_splits         = n_splits
+        self.colsample_bytree = colsample_bytree
+        self._handle          = None
+        self._n_features      = None
+
     def fit(self, X, residuals):
-        self.tree_ = self._build_tree(np.asarray(X), np.asarray(residuals))
+        X = np.ascontiguousarray(X, dtype=np.float64)
+        residuals = np.ascontiguousarray(residuals, dtype=np.float64).ravel()
+
+        n, m = X.shape
+        self._n_features = m
+
+        if self._handle is not None:
+            _lib.tree_free(self._handle)
+            self._handle = None
+
+        self._handle = _lib.tree_create(
+            self.max_depth,
+            self.min_samples_leaf,
+            self.sigma_prior,
+            self.n_splits,
+            self.colsample_bytree,
+        )
+        if not self._handle:
+            raise MemoryError("tree_create returned NULL")
+
+        _lib.tree_fit(self._handle, _dptr(X), _dptr(residuals), n, m)
         return self
-    
-    def _predict_one(self, x, node):
-        while node['type'] != 'leaf':
-            node = node['left'] if x[node['feature']] <= node['threshold'] else node['right']
-        return node['weight']
-    
+
     def predict(self, X):
-        return np.array([self._predict_one(x, self.tree_) for x in np.asarray(X)])
+        X = np.ascontiguousarray(X, dtype=np.float64)
+        n, m = X.shape
+
+        p = _lib.tree_predict(self._handle, _dptr(X), n, m)
+        if not p:
+            raise RuntimeError("tree_predict returned NULL")
+
+        # zero-copy view + copy, чтобы после free данные остались
+        out = np.ctypeslib.as_array(p.contents.preds, shape=(n,)).copy()
+        _lib.predictions_free(p)
+        return out
+
+    def predict_with_uncertainty(self, X):
+        X = np.ascontiguousarray(X, dtype=np.float64)
+        n, m = X.shape
+
+        p = _lib.tree_predict(self._handle, _dptr(X), n, m)
+        if not p:
+            raise RuntimeError("tree_predict returned NULL")
+
+        preds = np.ctypeslib.as_array(p.contents.preds, shape=(n,)).copy()
+        uncs  = np.ctypeslib.as_array(p.contents.uncertainties, shape=(n,)).copy()
+        _lib.predictions_free(p)
+        return preds, uncs
+
+    def __del__(self):
+        try:
+            if self._handle is not None:
+                _lib.tree_free(self._handle)
+                self._handle = None
+        except Exception:
+            pass

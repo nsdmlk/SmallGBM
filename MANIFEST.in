@@ -1,2 +1,4 @@
 include README.md
 include LICENSE
+recursive-include smallgbm/_c *.c *.h *.dylib *.so *.dll
+recursive-include smallgbm *.py
