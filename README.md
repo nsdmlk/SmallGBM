@@ -58,6 +58,16 @@ Full enumeration of all possible split thresholds overfits on small data. SmallG
 
 ---
 
+## Limitations
+
+- **Regression is not supported.** `SmallGBMRegressor` exists in the API but
+  is **not validated** and **not recommended**. Regression benchmarks show
+  normalized MAE of 0.61 vs 0.39 for XGBoost on 26 small datasets
+  (mean rank 4.46 vs 2.31). The robust leaf regularization, tuned for
+  classification, does not transfer to regression.
+
+---
+
 ## When NOT to use SmallGBM
 
 SmallGBM is designed for **small datasets (n < 1000)**. On larger data,
