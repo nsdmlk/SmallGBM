@@ -11,7 +11,11 @@
   <img src="https://img.shields.io/badge/license-MIT-brightgreen" alt="license">
   <img src="https://img.shields.io/badge/pip%20install-smallgbm-orange" alt="pip">
   <img src="https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21934674-blue" alt="DOI">
+  <a href="https://github.com/YDX-2147483647/best-of-bits">
+    <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/YDX-2147483647/best-of-bits/main/config/badge/v1.json" alt="best of BITs">
+  </a>
 </p>
+
 
 ---
 
@@ -55,6 +59,16 @@ This makes predictions robust to outliers and label noise — the main enemies o
 ## Why Stochastic Split Selection?
 
 Full enumeration of all possible split thresholds overfits on small data. SmallGBM uses **5 random thresholds per feature** (via the histogram) — less overfitting, faster training, and better generalization.
+
+---
+
+## Limitations
+
+- **Regression is not supported.** `SmallGBMRegressor` exists in the API but
+  is **not validated** and **not recommended**. Regression benchmarks show
+  normalized MAE of 0.61 vs 0.39 for XGBoost on 26 small datasets
+  (mean rank 4.46 vs 2.31). The robust leaf regularization, tuned for
+  classification, does not transfer to regression.
 
 ---
 
