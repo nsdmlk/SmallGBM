@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SmallGBM — Gradient Boosting for Small Data</title>
-    <meta name="description" content="SmallGBM — gradient boosting optimized for small datasets (n < 1000). Bayesian leaf weights, noise stability, scikit-learn compatible." />
+    <meta name="description" content="SmallGBM — gradient boosting for small tabular data (n < 1000). C backend, outperforms XGBoost, 2-3× faster training. scikit-learn compatible." />
     <meta name="author" content="Emelyanov Ilya" />
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23FAFAF8' stroke='%238B5CF6' stroke-width='3'/%3E%3Ctext x='50' y='64' font-family='Georgia,serif' font-size='38' fill='%238B5CF6' text-anchor='middle' font-style='italic'%3ES%3C/text%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -24,6 +24,7 @@
             --accent-hover: #7C3AED;
             --green: #059669;
             --green-soft: rgba(5, 150, 105, 0.06);
+            --red: #DC2626;
             --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.02);
             --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.04);
             --radius: 12px;
@@ -119,8 +120,8 @@
         .hero .subtitle {
             font-size: 0.95rem;
             color: var(--text-secondary);
-            max-width: 540px;
-            margin: 0 auto 28px;
+            max-width: 560px;
+            margin: 0 auto 24px;
             line-height: 1.7;
         }
         .hero-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
@@ -168,6 +169,39 @@
         }
         .pip-box button:hover { color: #fff; }
         .pip-box .copied { color: var(--green); font-size: 0.7rem; display: none; }
+
+        /* Live GitHub stats */
+        .gh-stats {
+            display: flex;
+            justify-content: center;
+            gap: 28px;
+            flex-wrap: wrap;
+            margin-top: 28px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+            max-width: 520px;
+            margin-left: auto;
+            margin-right: auto;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+        .gh-stats.loaded { opacity: 1; }
+        .gh-stat {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        .gh-stat i {
+            color: var(--accent);
+            font-size: 0.9rem;
+        }
+        .gh-stat .gh-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 500;
+            color: var(--text);
+        }
 
         /* Section headings */
         .section-head {
@@ -251,7 +285,9 @@
         td { color: var(--text-secondary); }
         tr:last-child td { border-bottom: none; }
         .check { color: var(--green); }
-        .cross { color: #DC2626; }
+        .cross { color: var(--red); }
+        .best { background: var(--accent-soft); }
+        .best td { color: var(--accent); font-weight: 600; }
 
         /* Code blocks */
         .code-block {
@@ -283,6 +319,33 @@
             font-size: 0.72rem;
             color: var(--text-tertiary);
         }
+
+        /* Limitations */
+        .limit-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--red);
+            border-radius: var(--radius);
+            padding: 20px 24px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 16px;
+        }
+        .limit-card h4 {
+            font-family: 'Instrument Serif', serif;
+            font-size: 1.05rem;
+            font-weight: 400;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .limit-card h4 i { color: var(--red); font-size: 0.85rem; }
+        .limit-card p {
+            font-size: 0.83rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+        .limit-card p strong { color: var(--text); font-weight: 600; }
 
         /* Research */
         .graph-card {
@@ -332,11 +395,14 @@
             .hero h1 { font-size: 2.2rem; }
             .why-grid { grid-template-columns: 1fr; }
             .nav-links { display: none; }
+            .gh-stats { gap: 20px; }
         }
         @media (max-width: 480px) {
             .container { padding: 28px 14px 44px; gap: 40px; }
             .hero h1 { font-size: 1.7rem; }
             .section-head h2 { font-size: 1.35rem; }
+            .gh-stats { gap: 16px; }
+            .gh-stat { font-size: 0.75rem; }
         }
     </style>
 </head>
@@ -349,6 +415,7 @@
                 <a href="#why">Why</a>
                 <a href="#start">Start</a>
                 <a href="#api">API</a>
+                <a href="#limits">Limits</a>
                 <a href="#research">Research</a>
                 <a href="https://github.com/nsdmlk/SmallGBM" target="_blank">GitHub</a>
             </div>
@@ -360,12 +427,13 @@
         <!-- HERO -->
         <section class="hero">
             <div class="hero-badge">
-                <i class="fas fa-cube"></i> PyPI · v1.0.1
+                <i class="fas fa-cube"></i> PyPI · v1.5.0
             </div>
             <h1>Gradient Boosting<br>for <span>Small Data</span></h1>
             <p class="subtitle">
                 XGBoost and LightGBM fail when you have 50–500 samples. SmallGBM is built from the ground up
-                for data-scarce regimes — Bayesian leaf weights, noise stability, and scikit-learn API.
+                for data-scarce regimes — robust leaf weights, stochastic splits, native C core,
+                and scikit-learn API.
             </p>
             <div class="pip-box" id="pipBox">
                 pip install smallgbm
@@ -382,6 +450,30 @@
                     <i class="fab fa-github"></i> View on GitHub
                 </a>
             </div>
+
+            <!-- Live GitHub stats -->
+            <div class="gh-stats" id="ghStats">
+                <div class="gh-stat">
+                    <i class="fas fa-star"></i>
+                    <span class="gh-num" id="ghStars">—</span>
+                    <span>stars</span>
+                </div>
+                <div class="gh-stat">
+                    <i class="fas fa-code-fork"></i>
+                    <span class="gh-num" id="ghForks">—</span>
+                    <span>forks</span>
+                </div>
+                <div class="gh-stat">
+                    <i class="fas fa-eye"></i>
+                    <span class="gh-num" id="ghWatchers">—</span>
+                    <span>watching</span>
+                </div>
+                <div class="gh-stat">
+                    <i class="fas fa-circle-exclamation"></i>
+                    <span class="gh-num" id="ghIssues">—</span>
+                    <span>issues</span>
+                </div>
+            </div>
         </section>
 
         <!-- WHY -->
@@ -394,18 +486,19 @@
             <div class="why-grid" style="margin-bottom:32px;">
                 <div class="why-card">
                     <div class="icon-circle"><i class="fas fa-shield-halved"></i></div>
-                    <h3>Bayesian Leaf Weights</h3>
+                    <h3>Robust Leaf Weights</h3>
                     <p>
-                        Shrinks leaf predictions toward zero when data is scarce. Prevents overfitting
-                        without manual tuning — the prior does the work.
+                        Median for small leaves, inverse-distance weighted mean for larger ones,
+                        plus signal-adaptive shrinkage. One outlier can't destroy the estimate.
                     </p>
                 </div>
                 <div class="why-card">
-                    <div class="icon-circle"><i class="fas fa-wave-square"></i></div>
-                    <h3>Noise Stability</h3>
+                    <div class="icon-circle"><i class="fas fa-bolt"></i></div>
+                    <h3>C Core</h3>
                     <p>
-                        Degrades gracefully under label noise. At 20% flipped labels, SmallGBM
-                        outperforms XGBoost and LightGBM by a wide margin.
+                        Histogram-based tree with 256 quantile bins, compiled on install.
+                        <strong>2.7× faster training</strong> and up to <strong>5× faster inference</strong>
+                        than XGBoost on small data.
                     </p>
                 </div>
                 <div class="why-card">
@@ -422,46 +515,43 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Feature</th>
-                            <th>SmallGBM</th>
-                            <th>XGBoost</th>
-                            <th>LightGBM</th>
+                            <th>Model</th>
+                            <th>AUC</th>
+                            <th>Fit (ms)</th>
+                            <th>Predict (ms)</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td>Bayesian leaf weights</td>
-                            <td><span class="check"><i class="fas fa-check"></i></span></td>
-                            <td><span class="cross"><i class="fas fa-times"></i></span></td>
-                            <td><span class="cross"><i class="fas fa-times"></i></span></td>
+                        <tr class="best">
+                            <td>SmallGBM</td>
+                            <td>0.9101</td>
+                            <td>13.4</td>
+                            <td>0.29</td>
                         </tr>
                         <tr>
-                            <td>Adaptive regularization</td>
-                            <td><span class="check"><i class="fas fa-check"></i></span></td>
-                            <td><span class="cross"><i class="fas fa-times"></i></span></td>
-                            <td><span class="cross"><i class="fas fa-times"></i></span></td>
+                            <td>XGBoost</td>
+                            <td>0.9036</td>
+                            <td>36.5</td>
+                            <td>0.46</td>
                         </tr>
                         <tr>
-                            <td>No bootstrap (uses all data)</td>
-                            <td><span class="check"><i class="fas fa-check"></i></span></td>
-                            <td><span class="cross"><i class="fas fa-times"></i></span></td>
-                            <td><span class="cross"><i class="fas fa-times"></i></span></td>
+                            <td>RandomForest</td>
+                            <td>0.9007</td>
+                            <td>28.8</td>
+                            <td>1.57</td>
                         </tr>
                         <tr>
-                            <td>Stable under label noise</td>
-                            <td><span class="check"><i class="fas fa-check"></i></span></td>
-                            <td><span class="cross"><i class="fas fa-times"></i></span></td>
-                            <td><span class="cross"><i class="fas fa-times"></i></span></td>
-                        </tr>
-                        <tr>
-                            <td>scikit-learn compatible</td>
-                            <td><span class="check"><i class="fas fa-check"></i></span></td>
-                            <td><span class="check"><i class="fas fa-check"></i></span></td>
-                            <td><span class="check"><i class="fas fa-check"></i></span></td>
+                            <td>LightGBM</td>
+                            <td>0.8958</td>
+                            <td>34.3</td>
+                            <td>0.57</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
+            <p style="font-size:0.75rem;color:var(--text-tertiary);margin-top:10px;">
+                22 datasets (15 synthetic + 7 real-world) · 5-fold cross-validation · same default hyperparameters for all models.
+            </p>
         </section>
 
         <!-- GETTING STARTED -->
@@ -473,11 +563,15 @@
 
             <h4 style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-tertiary);margin-bottom:10px;">Installation</h4>
             <div class="code-block">
-                <span class="cmt"># pip</span><br>
+                <span class="cmt"># pip (compiles C core automatically)</span><br>
                 pip install smallgbm
             </div>
+            <p style="font-size:0.78rem;color:var(--text-tertiary);margin-bottom:20px;">
+                Requires a C compiler on <code>PATH</code> (<code>cc</code>, <code>clang</code>, or <code>gcc</code>).
+                On macOS: <code>xcode-select --install</code>.
+            </p>
 
-            <h4 style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-tertiary);margin-bottom:10px;margin-top:24px;">Classification — 5 lines</h4>
+            <h4 style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-tertiary);margin-bottom:10px;">Classification — 5 lines</h4>
             <div class="code-block">
                 <span class="kw">from</span> smallgbm <span class="kw">import</span> <span class="fn">SmallGBMClassifier</span><br><br>
                 model = <span class="fn">SmallGBMClassifier</span>()<br>
@@ -486,13 +580,11 @@
                 preds = model.<span class="fn">predict</span>(X_test)
             </div>
 
-            <h4 style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-tertiary);margin-bottom:10px;margin-top:24px;">Regression — 5 lines</h4>
-            <div class="code-block">
-                <span class="kw">from</span> smallgbm <span class="kw">import</span> <span class="fn">SmallGBMRegressor</span><br><br>
-                model = <span class="fn">SmallGBMRegressor</span>()<br>
-                model.<span class="fn">fit</span>(X_train, y_train)<br>
-                preds = model.<span class="fn">predict</span>(X_test)
-            </div>
+            <p style="font-size:0.8rem;color:var(--text-secondary);margin-top:16px;padding:14px 18px;background:rgba(220,38,38,0.04);border-left:3px solid var(--red);border-radius:8px;">
+                <strong>Regression is not recommended.</strong> <code>SmallGBMRegressor</code> exists in the API
+                but is not validated — robust leaf regularization, tuned for classification, does not transfer.
+                See <a href="#limits" style="color:var(--accent);">Limitations</a>.
+            </p>
         </section>
 
         <!-- API REFERENCE -->
@@ -503,26 +595,6 @@
             </div>
 
             <h4 style="font-size:0.8rem;color:var(--text);margin-bottom:10px;">SmallGBMClassifier</h4>
-            <div class="table-wrap api-table" style="margin-bottom:28px;">
-                <table>
-                    <thead>
-                        <tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
-                    </thead>
-                    <tbody>
-                        <tr><td>n_estimators</td><td>50</td><td>Number of boosting rounds</td></tr>
-                        <tr><td>max_depth</td><td>3</td><td>Maximum tree depth</td></tr>
-                        <tr><td>min_samples_leaf</td><td>3</td><td>Minimum samples per leaf</td></tr>
-                        <tr><td>learning_rate</td><td>0.1</td><td>Shrinkage factor for each tree</td></tr>
-                        <tr><td>sigma_prior</td><td>0.5</td><td>Bayesian prior strength</td></tr>
-                        <tr><td>adaptive_prior</td><td>False</td><td>Auto-set sigma_prior = 1/√n</td></tr>
-                        <tr><td>dynamic_depth</td><td>False</td><td>Deeper early trees, shallower later</td></tr>
-                        <tr><td>weighted_residuals</td><td>False</td><td>Weight residuals by confidence</td></tr>
-                        <tr><td>soft_bootstrap</td><td>False</td><td>Soft bootstrap sampling</td></tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <h4 style="font-size:0.8rem;color:var(--text);margin-bottom:10px;">SmallGBMRegressor</h4>
             <div class="table-wrap api-table">
                 <table>
                     <thead>
@@ -533,52 +605,42 @@
                         <tr><td>max_depth</td><td>3</td><td>Maximum tree depth</td></tr>
                         <tr><td>min_samples_leaf</td><td>3</td><td>Minimum samples per leaf</td></tr>
                         <tr><td>learning_rate</td><td>0.1</td><td>Shrinkage factor for each tree</td></tr>
-                        <tr><td>sigma_prior</td><td>0.5</td><td>Bayesian prior strength</td></tr>
-                        <tr><td>adaptive_prior</td><td>False</td><td>Auto-set sigma_prior = 1/√n</td></tr>
-                        <tr><td>dynamic_depth</td><td>False</td><td>Deeper early trees, shallower later</td></tr>
-                        <tr><td>weighted_residuals</td><td>False</td><td>Weight residuals by confidence</td></tr>
-                        <tr><td>soft_bootstrap</td><td>False</td><td>Soft bootstrap sampling</td></tr>
+                        <tr><td>sigma_prior</td><td>0.5</td><td>Regularization strength</td></tr>
+                        <tr><td>colsample_bytree</td><td>0.5</td><td>Feature fraction per tree</td></tr>
+                        <tr><td>random_state</td><td>None</td><td>Reproducibility</td></tr>
+                        <tr><td>auto_scale</td><td>False</td><td>RobustScaler internally</td></tr>
                     </tbody>
                 </table>
             </div>
         </section>
 
-        <!-- RESEARCH -->
-        <section id="research">
+        <!-- LIMITATIONS -->
+        <section id="limits">
             <div class="section-head">
-                <i class="fas fa-flask"></i>
-                <h2>Research</h2>
+                <i class="fas fa-triangle-exclamation"></i>
+                <h2>When NOT to use SmallGBM</h2>
             </div>
-            <p style="font-size:0.88rem;color:var(--text-secondary);margin-bottom:28px;line-height:1.7;">
-                SmallGBM is characterized across 7 experiments in
-                <a href="https://github.com/nsdmlk/SmallGBM/blob/main/Tests/benchmark.ipynb" target="_blank" style="color:var(--accent);">benchmark_final.ipynb</a>.
-                Key findings below.
-            </p>
 
-            <div class="graph-card">
-                <h3>Noise Stability: SmallGBM vs Baselines</h3>
-                <p class="graph-desc">
-                    At 20% label noise, SmallGBM is the <strong>best performer</strong>. Bayesian regularization
-                    keeps it stable when XGBoost and LightGBM collapse toward random guessing.
+            <div class="limit-card">
+                <h4><i class="fas fa-xmark"></i> Regression</h4>
+                <p>
+                    <code>SmallGBMRegressor</code> exists in the API but is <strong>not validated</strong> and
+                    <strong>not recommended</strong>. On 26 small regression datasets it scores normalized MAE of
+                    <strong>0.61 vs 0.39 for XGBoost</strong> (mean rank 4.46 vs 2.31). The robust leaf
+                    regularization, tuned for classification, does not transfer to regression.
                 </p>
-                <img src="noise_comparison.png" alt="Noise stability comparison" />
-                <p class="graph-note">Figure: Test AUC vs label noise. n=60, 10 seeds. Error bars = ±1 std.</p>
             </div>
 
-            <div class="graph-card">
-                <h3>Learning Curve</h3>
-                <p class="graph-desc">
-                    Clear, predictable improvement as data grows. <strong>Reliable performance starts at n≈40.</strong>
-                    No sudden jumps, no catastrophic failures — a safe choice when data is limited.
+            <div class="limit-card">
+                <h4><i class="fas fa-xmark"></i> Large datasets (n &gt; 1000)</h4>
+                <p>
+                    SmallGBM is designed for small data. On larger sets, XGBoost and LightGBM are optimized
+                    for scale and will train orders of magnitude faster. Example: at <strong>n = 200k</strong>,
+                    XGBoost reaches <strong>0.923 AUC in 0.71s</strong>, while SmallGBM gets
+                    <strong>0.884 in 69s</strong>. This is expected — robust leaf regularization is a
+                    small-sample technique.
                 </p>
-                <img src="learning_curve.png" alt="SmallGBM learning curve" />
-                <p class="graph-note">Figure: Test AUC vs training set size. 10 seeds per point. Error bars = ±1 std.</p>
             </div>
-
-            <p style="font-size:0.8rem;color:var(--text-tertiary);margin-top:8px;">
-                <i class="fas fa-file-pdf"></i> Full characterization notebook with 7 experiments:
-                <a href="https://github.com/nsdmlk/SmallGBM/blob/main/Tests/benchmark.ipynb" target="_blank" style="color:var(--accent);">benchmark_final.ipynb</a>
-            </p>
         </section>
 
     </main>
@@ -606,6 +668,30 @@
                 }
             });
         });
+
+        // Live GitHub stats
+        (async function fetchGitHubStats() {
+            const REPO = 'nsdmlk/SmallGBM';
+            const statsEl = document.getElementById('ghStats');
+            try {
+                const res = await fetch(`https://api.github.com/repos/${REPO}`, {
+                    headers: { 'Accept': 'application/vnd.github+json' }
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+
+                const fmt = n => n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(n);
+
+                document.getElementById('ghStars').textContent = fmt(data.stargazers_count);
+                document.getElementById('ghForks').textContent = fmt(data.forks_count);
+                document.getElementById('ghWatchers').textContent = fmt(data.subscribers_count ?? data.watchers_count);
+                document.getElementById('ghIssues').textContent = fmt(data.open_issues_count);
+
+                statsEl.classList.add('loaded');
+            } catch (e) {
+                // Silent fail — stats stay hidden
+            }
+        })();
     </script>
 
 </body>
