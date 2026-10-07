@@ -11,7 +11,11 @@
   <img src="https://img.shields.io/badge/license-MIT-brightgreen" alt="license">
   <img src="https://img.shields.io/badge/pip%20install-smallgbm-orange" alt="pip">
   <img src="https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21934674-blue" alt="DOI">
+  <a href="https://github.com/YDX-2147483647/best-of-bits">
+    <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/YDX-2147483647/best-of-bits/main/config/badge/v1.json" alt="best of BITs">
+  </a>
 </p>
+
 
 ---
 
